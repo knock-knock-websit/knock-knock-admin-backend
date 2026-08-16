@@ -1,0 +1,2 @@
+# Required for admin login. Generate with: openssl rand -hex 32
+JWT_SECRET=156672d0c2069c0cd32295335ff5068d99d9aebf3d6a85009bfdf3f0141d4d6c
