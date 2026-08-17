@@ -9,6 +9,7 @@ import { createAccessToken, verifyPassword } from "./security";
 import { createAdminUser, deactivateAdminRole, listAdminUsers, updateAdminRole } from "./admin-users";
 import { listCustomers } from "./customers";
 import { getBankTransferSettings, updateBankTransferSettings } from "./payment-settings";
+import { getShippingSettings, updateShippingSettings } from "./shipping-settings";
 import { listOrders, updateOrder } from "./orders";
 import { getDashboard } from "./dashboard";
 import {
@@ -174,6 +175,8 @@ export default {
       if (request.method === "PATCH" && orderMatch?.[1]) return updateOrder(request, env, decodeURIComponent(orderMatch[1]));
       if (request.method === "GET" && url.pathname === "/api/admin/payment-settings/bank-transfer") return getBankTransferSettings(request, env);
       if (request.method === "PUT" && url.pathname === "/api/admin/payment-settings/bank-transfer") return updateBankTransferSettings(request, env);
+      if (request.method === "GET" && url.pathname === "/api/admin/shipping-settings") return getShippingSettings(request, env);
+      if (request.method === "PUT" && url.pathname === "/api/admin/shipping-settings") return updateShippingSettings(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/carousels") return listCarousels(request, env);
       if (request.method === "POST" && url.pathname === "/api/admin/carousels") return createCarousel(request, env);
       if (request.method === "GET" && url.pathname === "/api/admin/marquees") return listMarquees(request, env);

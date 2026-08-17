@@ -3,7 +3,7 @@ import { errorResponse, respond } from "./http";
 import { createPasswordHash } from "./security";
 import type { Env, PermissionMap } from "./types";
 
-const resources = ["products", "categories", "orders", "customers", "payments", "coupons", "content", "reports", "admins", "logs", "settings"] as const;
+const resources = ["products", "categories", "orders", "customers", "payments", "logistics", "coupons", "content", "reports", "admins", "logs", "settings"] as const;
 const allActions = ["view", "create", "edit", "delete", "export"];
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

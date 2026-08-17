@@ -6,6 +6,7 @@ type CustomerRow = {
   id: string;
   name: string;
   email: string;
+  phone: string;
   birthday: string | null;
   gender: "undisclosed" | "female" | "male" | "other";
   spent: number;
@@ -27,9 +28,9 @@ export async function listCustomers(request: Request, env: Env): Promise<Respons
   const conditions: string[] = [];
   const bindings: unknown[] = [];
   if (search) {
-    conditions.push("(m.name LIKE ? ESCAPE '\\' OR m.email LIKE ? ESCAPE '\\')");
+    conditions.push("(m.name LIKE ? ESCAPE '\\' OR m.email LIKE ? ESCAPE '\\' OR m.phone LIKE ? ESCAPE '\\')");
     const pattern = `%${search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
-    bindings.push(pattern, pattern);
+    bindings.push(pattern, pattern, pattern);
   }
   if (loginStatus === "online") conditions.push(`EXISTS (
     SELECT 1 FROM member_sessions session
@@ -48,7 +49,7 @@ export async function listCustomers(request: Request, env: Env): Promise<Respons
     .bind(...bindings).first<{ total: number }>();
   const result = await env.DB.prepare(`
     SELECT
-      m.id, m.name, m.email, m.birthday, m.gender, m.status,
+      m.id, m.name, m.email, m.phone, m.birthday, m.gender, m.status,
       strftime('%Y-%m-%dT%H:%M:%S+08:00', datetime(m.created_at, '+8 hours')) AS joinedAt,
       COALESCE(SUM(CASE WHEN o.status IN ('paid', 'fulfilled') THEN o.total ELSE 0 END), 0) AS spent,
       CASE WHEN EXISTS (

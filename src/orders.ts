@@ -7,6 +7,7 @@ type OrderRow = {
   total: number; subtotal: number; discount: number; shipping: number; paymentMethod: string;
   paymentStatus: string; shippingStatus: string; status: string; shippingMethod: string;
   storeName: string; storeId: string; storeAddress: string; storePhone: string;
+  deliveryAddress: string;
   promotionName: string | null; couponCode: string | null; orderNote: string; internalNote: string;
   trackingNo: string; createdAt: string; updatedAt: string; itemsJson: string;
   bankCode: string; bankName: string; bankBranchName: string; bankAccountName: string;
@@ -25,6 +26,7 @@ const columns = `
   COALESCE(orders.pickup_store_id, '') AS storeId,
   COALESCE(orders.pickup_store_address, '') AS storeAddress,
   COALESCE(orders.pickup_store_phone, '') AS storePhone,
+  COALESCE(orders.delivery_address, '') AS deliveryAddress,
   orders.promotion_name AS promotionName, orders.coupon_code AS couponCode,
   orders.order_note AS orderNote, orders.internal_note AS internalNote,
   orders.tracking_no AS trackingNo, orders.created_at AS createdAt, orders.updated_at AS updatedAt,

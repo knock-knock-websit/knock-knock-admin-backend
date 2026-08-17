@@ -39,8 +39,8 @@ export async function getDashboard(request: Request, env: Env): Promise<Response
       SELECT
         SUM(CASE WHEN ${orderDay} = ${today} THEN 1 ELSE 0 END) AS todayOrders,
         SUM(CASE WHEN ${orderDay} = date(${today}, '-1 day') THEN 1 ELSE 0 END) AS yesterdayOrders,
-        SUM(CASE WHEN ${orderDay} = ${today} AND orders.payment_status = 'paid' AND orders.status != 'cancelled' THEN orders.total_amount ELSE 0 END) AS todayRevenue,
-        SUM(CASE WHEN ${orderDay} = date(${today}, '-1 day') AND orders.payment_status = 'paid' AND orders.status != 'cancelled' THEN orders.total_amount ELSE 0 END) AS yesterdayRevenue,
+        SUM(CASE WHEN ${orderDay} = ${today} AND orders.payment_status = 'paid' AND orders.status != 'cancelled' THEN MAX(0, orders.total_amount - COALESCE(orders.shipping_amount, 0)) ELSE 0 END) AS todayRevenue,
+        SUM(CASE WHEN ${orderDay} = date(${today}, '-1 day') AND orders.payment_status = 'paid' AND orders.status != 'cancelled' THEN MAX(0, orders.total_amount - COALESCE(orders.shipping_amount, 0)) ELSE 0 END) AS yesterdayRevenue,
         SUM(CASE WHEN ${orderDay} = ${today} AND orders.payment_status = 'pending' AND orders.status != 'cancelled' THEN 1 ELSE 0 END) AS todayUnpaid,
         SUM(CASE WHEN ${orderDay} = date(${today}, '-1 day') AND orders.payment_status = 'pending' AND orders.status != 'cancelled' THEN 1 ELSE 0 END) AS yesterdayUnpaid,
         SUM(CASE WHEN ${orderDay} = ${today} AND orders.payment_status = 'paid' AND orders.shipping_status IN ('unfulfilled', 'preparing') AND orders.status != 'cancelled' THEN 1 ELSE 0 END) AS todayShipping,
@@ -59,7 +59,7 @@ export async function getDashboard(request: Request, env: Env): Promise<Response
         UNION ALL SELECT date(day, '+1 day') FROM days WHERE day < ${today}
       ), totals AS (
         SELECT ${orderDay} AS day,
-          SUM(CASE WHEN orders.payment_status = 'paid' AND orders.status != 'cancelled' THEN orders.total_amount ELSE 0 END) AS revenue,
+          SUM(CASE WHEN orders.payment_status = 'paid' AND orders.status != 'cancelled' THEN MAX(0, orders.total_amount - COALESCE(orders.shipping_amount, 0)) ELSE 0 END) AS revenue,
           SUM(CASE WHEN orders.status != 'cancelled' THEN 1 ELSE 0 END) AS orders
         FROM orders
         WHERE ${orderDay} >= date(${today}, '-6 days')
