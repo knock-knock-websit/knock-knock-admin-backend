@@ -19,6 +19,24 @@ type CategoryPayload = {
   enabled?: unknown;
 };
 
+const categoryProductCountsCte = `
+  WITH RECURSIVE category_descendants(category_id, descendant_id, descendant_name) AS (
+    SELECT id, id, name FROM product_categories
+    UNION ALL
+    SELECT tree.category_id, child.id, child.name
+    FROM category_descendants tree
+    INNER JOIN product_categories child ON child.parent_id = tree.descendant_id
+  ),
+  category_product_counts AS (
+    SELECT tree.category_id, COUNT(p.id) AS product_count
+    FROM category_descendants tree
+    LEFT JOIN products p
+      ON p.category_id = tree.descendant_id
+      OR (p.category_id IS NULL AND p.category = tree.descendant_name)
+    GROUP BY tree.category_id
+  )
+`;
+
 function serializeCategory(row: CategoryRow) {
   return {
     id: row.id,
@@ -108,11 +126,12 @@ function readSortOrder(value: unknown): number | null {
 }
 
 async function getRow(env: Env, id: string): Promise<CategoryRow | null> {
-  return env.DB.prepare(`
+  return env.DB.prepare(`${categoryProductCountsCte}
     SELECT
       c.id, c.name, c.parent_id, c.level, c.sort_order, c.active,
-      (SELECT COUNT(*) FROM products p WHERE p.category = c.name) AS product_count
+      COALESCE(counts.product_count, 0) AS product_count
     FROM product_categories c
+    LEFT JOIN category_product_counts counts ON counts.category_id = c.id
     WHERE c.id = ?
   `).bind(id).first<CategoryRow>();
 }
@@ -162,11 +181,12 @@ async function resolveLevel(
 export async function listCategories(request: Request, env: Env): Promise<Response> {
   const admin = await authorize(request, env, "view");
   if (admin instanceof Response) return admin;
-  const result = await env.DB.prepare(`
+  const result = await env.DB.prepare(`${categoryProductCountsCte}
     SELECT
       c.id, c.name, c.parent_id, c.level, c.sort_order, c.active,
-      (SELECT COUNT(*) FROM products p WHERE p.category = c.name) AS product_count
+      COALESCE(counts.product_count, 0) AS product_count
     FROM product_categories c
+    LEFT JOIN category_product_counts counts ON counts.category_id = c.id
     ORDER BY c.level ASC, c.sort_order ASC, c.name ASC
   `).all<CategoryRow>();
   return respond(request, env, buildCategoryTree(result.results));
