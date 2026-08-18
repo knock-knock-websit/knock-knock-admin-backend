@@ -1,6 +1,7 @@
 import type { Env, TokenPayload } from "./types";
 
 const encoder = new TextEncoder();
+const passwordHashIterations = 100_000;
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -26,7 +27,7 @@ function timingSafeEqual(left: Uint8Array, right: Uint8Array): boolean {
 export async function verifyPassword(password: string, encodedHash: string): Promise<boolean> {
   const [algorithm, iterationsText, saltText, expectedText] = encodedHash.split("$");
   const iterations = Number(iterationsText);
-  if (algorithm !== "pbkdf2_sha256" || !Number.isInteger(iterations) || iterations < 100_000) return false;
+  if (algorithm !== "pbkdf2_sha256" || iterations !== passwordHashIterations) return false;
   if (!saltText || !expectedText) return false;
 
   try {
@@ -43,7 +44,7 @@ export async function verifyPassword(password: string, encodedHash: string): Pro
 }
 
 export async function createPasswordHash(password: string): Promise<string> {
-  const iterations = 210_000;
+  const iterations = passwordHashIterations;
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
   const derived = new Uint8Array(await crypto.subtle.deriveBits(
