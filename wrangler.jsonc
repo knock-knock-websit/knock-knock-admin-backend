@@ -1,24 +1,29 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "knock-knock-admin-backend",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-05-22",
-  "vars": {
-    "ADMIN_ORIGIN": "http://localhost:5173",
-    "ACCESS_TOKEN_TTL_SECONDS": "28800"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "knock-knock",
-      "database_id": "079d8dc1-8512-4638-9025-fa5b57e6204e",
-      "migrations_dir": "../knock-knock-database/migrations"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "PRODUCT_IMAGES",
-      "bucket_name": "knock-knock-product-images"
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "knock-knock-admin-backend",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-05-22",
+	"vars": {
+//		"ADMIN_ORIGIN": "http://localhost:5173",
+		"ADMIN_ORIGIN": "https://knock-knock-admin.t5138169.workers.dev",
+		"ACCESS_TOKEN_TTL_SECONDS": "28800"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "knock-knock",
+			"database_id": "079d8dc1-8512-4638-9025-fa5b57e6204e",
+			"migrations_dir": "../knock-knock-database/migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "PRODUCT_IMAGES",
+			"bucket_name": "knock-knock-product-images"
+		},
+		{
+			"bucket_name": "knock-knock-product-images",
+			"binding": "knock_knock_product_images"
+		}
+	]
 }
