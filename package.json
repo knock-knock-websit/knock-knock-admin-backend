@@ -2,6 +2,7 @@
   "name": "knock-knock-admin-backend",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
@@ -10,6 +11,7 @@
     "d1:execute:local": "wrangler d1 execute knock-knock --local --persist-to ../.wrangler/shared-state --config wrangler.jsonc",
     "password:hash": "node scripts/hash-password.mjs",
     "typecheck": "tsc --noEmit",
+    "deploy:check": "npm run typecheck && npm test && npm run build",
     "build": "WRANGLER_LOG_PATH=.wrangler/logs/build.log wrangler deploy --config wrangler.jsonc --dry-run --outdir dist",
     "deploy": "wrangler deploy --config wrangler.jsonc"
   },

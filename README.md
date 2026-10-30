@@ -63,7 +63,7 @@
 
 ## 本機啟動
 
-1. 執行 `npm install`。
+1. 使用 Node.js 24，執行 `npm ci`。此專案統一使用 npm 與 `package-lock.json`，不要提交其他套件管理工具的 lockfile。
 2. 複製 `.dev.vars.example` 為 `.dev.vars`，設定至少 32 字元的 `JWT_SECRET`。
 3. 執行 `npm run d1:migrate:local`。本機 D1 會與公開商店 Worker 共用根目錄的 `.wrangler/shared-state`。
 4. 用 `npm run password:hash -- '你的安全密碼'` 產生密碼雜湊。
@@ -87,3 +87,17 @@ npm run d1:execute:local -- --command \
 後台商品與分類頁不再提供 mock 分支，所有新增、修改與刪除都會送到 Admin Backend API。商品必須切換為「上架」後，才會出現在公開商店 API。
 
 部署前執行 `npm run typecheck` 與 `npm run build`，並使用 `wrangler secret put JWT_SECRET` 設定登入簽章密鑰。
+
+## GitHub 自動部署（Workers Builds）
+
+在 Cloudflare 的 Worker `knock-knock-admin-backend` → Settings → Builds 連接此 GitHub repo，並選擇要自動部署的分支。
+
+- Root directory：儲存庫根目錄。
+- Build command：`npm run deploy:check`。
+- Deploy command：`npm run deploy`。
+- Node.js：`.node-version` 指定 24，也可在建置環境設定 `NODE_VERSION=24`。
+- Runtime Secret：在 Worker 的 Variables & Secrets 設定至少 32 字元的 `JWT_SECRET`；不要設成僅建置時可用的 Secret。
+
+`wrangler.jsonc` 使用正式後台來源網址；本機 `.dev.vars` 的 `ADMIN_ORIGIN=http://localhost:5173` 會覆寫它。
+測試使用 `tests/fixtures/migrations` 的 SQL 快照，可在單獨下載此 repo 後執行，不需要相鄰的資料庫 repo；資料庫 schema 有變更時，需同步更新快照。
+這些 SQL 僅供測試，不會由部署流程套用到雲端。正式資料庫 migrations 仍由資料庫專案管理。
