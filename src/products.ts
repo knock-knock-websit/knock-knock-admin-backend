@@ -54,6 +54,7 @@ type ProductVariantInput = {
   optionValueIds: string[];
   optionValues: ProductVariantOptionValueInput[];
   price: number;
+  cost: number;
   compareAtPrice: number | null;
   stock: number;
   safetyStock: number;
@@ -199,13 +200,13 @@ const productColumns = `
           ORDER BY relation.sort_order ASC
         ) value
       ), '[]')),
-      'price', variant.price, 'compareAtPrice', variant.compare_at_price,
+      'price', variant.price, 'cost', variant.cost, 'compareAtPrice', variant.compare_at_price,
       'stock', variant.stock, 'safetyStock', variant.safety_stock,
       'reserved', variant.reserved, 'imageUrl', variant.image_url,
       'purchasable', variant.purchasable
     ))
     FROM (
-      SELECT variant.id, variant.sku, variant.price, variant.compare_at_price,
+      SELECT variant.id, variant.sku, variant.price, variant.cost, variant.compare_at_price,
              variant.stock, variant.safety_stock, variant.reserved,
              COALESCE((
                SELECT color_image.image_url
@@ -296,7 +297,6 @@ async function parseInput(request: Request, env: Env): Promise<ProductInput | Re
   const categoryId = raw.categoryId == null ? null : stringValue(raw.categoryId, 100);
   const price = integerValue(raw.price);
   const compareAtPrice = raw.compareAtPrice == null ? null : integerValue(raw.compareAtPrice);
-  const cost = integerValue(raw.cost);
   const safetyStock = integerValue(raw.safetyStock);
   const sortOrder = integerValue(raw.sortOrder, 999_999);
   const brand = stringValue(raw.brand, 80, true);
@@ -308,7 +308,7 @@ async function parseInput(request: Request, env: Env): Promise<ProductInput | Re
     ? null
     : typeof raw.scheduledPublishAt === "string" ? raw.scheduledPublishAt : undefined;
   const tagType = raw.tagType;
-  if (!name || !code || !category || cost === null || safetyStock === null || sortOrder === null ||
+  if (!name || !code || !category || safetyStock === null || sortOrder === null ||
       price === null || !brand || description === null || seoTitle === null || seoDescription === null ||
       !["active", "inactive", "draft"].includes(String(status)) ||
       !["popular", "preorder", "new", "none"].includes(String(tagType))) {
@@ -439,6 +439,10 @@ async function parseInput(request: Request, env: Env): Promise<ProductInput | Re
     const variant = value as Record<string, unknown>;
     const sku = stringValue(variant.sku, 100)?.toUpperCase() ?? null;
     const variantPrice = integerValue(variant.price);
+    const variantCost = typeof variant.cost === "number" ? integerValue(variant.cost) : null;
+    if (variantCost === null) {
+      return errorResponse(request, env, `SKU ${sku ?? ""} 的成本必填，且必須是 0 至 999,999,999 的整數`, 400);
+    }
     const variantCompareAtPrice = variant.compareAtPrice == null
       ? null
       : integerValue(variant.compareAtPrice);
@@ -502,6 +506,7 @@ async function parseInput(request: Request, env: Env): Promise<ProductInput | Re
       optionValueIds,
       optionValues: optionValues as ProductVariantOptionValueInput[],
       price: variantPrice,
+      cost: variantCost,
       compareAtPrice: variantCompareAtPrice,
       stock,
       safetyStock: variantSafetyStock,
@@ -513,6 +518,8 @@ async function parseInput(request: Request, env: Env): Promise<ProductInput | Re
   if (new Set(variants.map((variant) => variant.sku)).size !== variants.length) {
     return errorResponse(request, env, "商品規格 SKU 不可重複", 400);
   }
+  // Keep the legacy product-level summary in sync with SKU costs.
+  const cost = Math.min(...variants.map((variant) => variant.cost));
 
   const colorImages: ProductColorImageInput[] = [];
   if (raw.colorImages !== undefined && !Array.isArray(raw.colorImages)) {
@@ -869,7 +876,7 @@ async function writeProduct(
   input.variants.forEach((variant, index) => {
     const variantId = scopedId("variant", productId, variant.id);
     variantRows.push([
-      variantId, productId, variant.sku, variant.price, variant.compareAtPrice,
+      variantId, productId, variant.sku, variant.price, variant.cost, variant.compareAtPrice,
       variant.stock, variant.safetyStock, variant.reserved,
       variant.optionValues.some((value) =>
         input.colorImages.some((image) => image.optionId === value.optionId)
@@ -891,9 +898,9 @@ async function writeProduct(
     statements,
     env,
     "product_variants",
-    "id, product_id, sku, price, compare_at_price, stock, safety_stock, reserved, image_url, purchasable, sort_order, option_signature",
+    "id, product_id, sku, price, cost, compare_at_price, stock, safety_stock, reserved, image_url, purchasable, sort_order, option_signature",
     variantRows,
-    8,
+    7,
   );
   appendBatchedInsert(
     statements,

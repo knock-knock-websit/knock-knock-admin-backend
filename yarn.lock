@@ -76,6 +76,11 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
+"@noble/hashes@2.4.0":
+  version "2.4.0"
+  resolved "https://registry.npmjs.org/@noble/hashes/-/hashes-2.4.0.tgz"
+  integrity sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==
+
 "@poppinss/colors@^4.1.5":
   version "4.1.6"
   resolved "https://registry.npmjs.org/@poppinss/colors/-/colors-4.1.6.tgz"

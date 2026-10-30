@@ -5,7 +5,7 @@ import { getProductImage, uploadContentImage, uploadProductImage } from "./uploa
 import { createCarousel, deleteCarousel, listCarousels, updateCarousel } from "./carousels";
 import { createMarquee, deleteMarquee, listMarquees, updateMarquee } from "./marquees";
 import { corsHeaders, errorResponse, respond } from "./http";
-import { createAccessToken, verifyPassword } from "./security";
+import { createAccessToken, createPasswordHash, passwordHashNeedsMigration, verifyPassword } from "./security";
 import { createAdminUser, deactivateAdminRole, listAdminUsers, updateAdminRole } from "./admin-users";
 import { listCustomers } from "./customers";
 import { getBankTransferSettings, updateBankTransferSettings } from "./payment-settings";
@@ -71,11 +71,15 @@ async function login(request: Request, env: Env): Promise<Response> {
   }
 
   const lastLoginAt = new Date().toISOString();
-  await env.DB.prepare(`
+  const passwordHash = passwordHashNeedsMigration(admin.password_hash)
+    ? await createPasswordHash(password)
+    : admin.password_hash;
+  const updated = await env.DB.prepare(`
     UPDATE admin_users
-    SET failed_login_count = 0, locked_until = NULL, last_login_at = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `).bind(lastLoginAt, admin.id).run();
+    SET password_hash = ?, failed_login_count = 0, locked_until = NULL, last_login_at = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND password_hash = ?
+  `).bind(passwordHash, lastLoginAt, admin.id, admin.password_hash).run();
+  if (updated.meta.changes !== 1) return errorResponse(request, env, "帳號狀態已變更，請重新登入", 401);
   const accessToken = await createAccessToken(env, admin.id, admin.role_code, admin.token_version);
   return respond(request, env, {
     accessToken,

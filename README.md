@@ -33,6 +33,8 @@
 - `GET /api/uploads/products/:key`，公開讀取已上傳的商品圖片
 
 商品回傳包含 `compareAtPrice`（未設定時為 `null`）、`images[]`、`colorImages[]` 與 `variants[]`。
+每個 `variants[].cost` 為必填的新台幣整數（0 至 999,999,999），商品層級的 `cost` 由最低 SKU 成本產生。更新服務前請先套用 migration `0037_product_variant_cost.sql`，既有 SKU 會沿用原商品成本。
+商品新增與更新都必須提供 `cost`（成本），單位為新台幣整數，範圍為 `0` 至 `999999999`。缺少、`null` 或空字串會回傳 HTTP 400「成本為必填欄位」；其他不合法值會回傳 HTTP 400「成本必須是 0 至 999,999,999 的整數」。商品列表、單筆查詢與儲存結果都會回傳 `cost`。
 圖片最多 20 張且只能有一張主圖；未指定主圖時會自動將第一張設為主圖。
 上傳支援 JPG、PNG 與 WebP，單張最大 5MB，檔案儲存於 `PRODUCT_IMAGES` R2 binding。
 
@@ -56,6 +58,8 @@
 - `dateFrom`、`dateTo`：台灣時間建立日期，格式 `YYYY-MM-DD`
 
 登入連續失敗 5 次會鎖定 15 分鐘；access token 預設有效 8 小時。修改帳號的 `token_version` 可讓既有 token 失效。
+
+新密碼使用 PBKDF2-SHA256、100,000 次迭代。既有的 210,000 次雜湊仍可使用原密碼登入，驗證成功後會自動以新 salt 轉為目前格式；驗證失敗不會修改密碼雜湊。
 
 ## 本機啟動
 

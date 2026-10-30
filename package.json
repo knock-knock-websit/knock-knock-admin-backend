@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
     "dev": "WRANGLER_LOG_PATH=.wrangler/logs/dev.log wrangler dev --config wrangler.jsonc --port 8788 --persist-to ../.wrangler/shared-state",
     "d1:migrate:local": "WRANGLER_LOG_PATH=.wrangler/logs/migrate.log wrangler d1 migrations apply knock-knock --local --persist-to ../.wrangler/shared-state --config wrangler.jsonc",
     "d1:execute:local": "wrangler d1 execute knock-knock --local --persist-to ../.wrangler/shared-state --config wrangler.jsonc",
@@ -14,7 +15,12 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260818.1",
+    "esbuild": "0.28.1",
+    "miniflare": "5.20260811.1-alpha",
     "typescript": "5.9.3",
     "wrangler": "4.123.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
   }
 }

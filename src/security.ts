@@ -1,7 +1,14 @@
+import { pbkdf2Async } from "@noble/hashes/pbkdf2.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 import type { Env, TokenPayload } from "./types";
 
 const encoder = new TextEncoder();
 const passwordHashIterations = 100_000;
+const legacyPasswordHashIterations = 210_000;
+
+export function passwordHashNeedsMigration(encodedHash: string): boolean {
+  return encodedHash.startsWith(`pbkdf2_sha256$${legacyPasswordHashIterations}$`);
+}
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -25,19 +32,30 @@ function timingSafeEqual(left: Uint8Array, right: Uint8Array): boolean {
 }
 
 export async function verifyPassword(password: string, encodedHash: string): Promise<boolean> {
-  const [algorithm, iterationsText, saltText, expectedText] = encodedHash.split("$");
+  const parts = encodedHash.split("$");
+  const [algorithm, iterationsText, saltText, expectedText] = parts;
   const iterations = Number(iterationsText);
-  if (algorithm !== "pbkdf2_sha256" || iterations !== passwordHashIterations) return false;
+  if (parts.length !== 4 || algorithm !== "pbkdf2_sha256") return false;
+  if (iterationsText !== String(passwordHashIterations) && iterationsText !== String(legacyPasswordHashIterations)) return false;
   if (!saltText || !expectedText) return false;
 
   try {
+    const salt = fromBase64Url(saltText);
+    const expected = fromBase64Url(expectedText);
+    if (salt.length !== 16 || expected.length !== 32) return false;
+    // Legacy hashes exceed Workers' Web Crypto PBKDF2 limit. Use the
+    // portable implementation only for these existing hashes.
+    if (iterations === legacyPasswordHashIterations) {
+      const actual = await pbkdf2Async(sha256, encoder.encode(password), salt, { c: iterations, dkLen: 32 });
+      return timingSafeEqual(actual, expected);
+    }
     const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
     const actual = new Uint8Array(await crypto.subtle.deriveBits(
-      { name: "PBKDF2", hash: "SHA-256", salt: fromBase64Url(saltText), iterations },
+      { name: "PBKDF2", hash: "SHA-256", salt, iterations },
       key,
       256,
     ));
-    return timingSafeEqual(actual, fromBase64Url(expectedText));
+    return timingSafeEqual(actual, expected);
   } catch {
     return false;
   }
