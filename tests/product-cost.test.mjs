@@ -74,17 +74,21 @@ test("SKU cost is saved on create, update, detail, and list, including zero", as
   const body = await created.json();
   assert.equal(created.status, 201, JSON.stringify(body));
   productId = body.data.id;
-  assert.equal(body.data.cost, 0);
+  assert.equal(Object.hasOwn(body.data, "cost"), false);
   for (const cost of [360, 999_999_999, 0]) {
     const updated = await request("PUT", `/${productId}`, { ...product, variants: product.variants.map((variant) => ({ ...variant, cost })) });
     assert.equal(updated.status, 200);
     const saved = (await updated.json()).data;
-    assert.equal(saved.cost, cost);
+    assert.equal(Object.hasOwn(saved, "cost"), false);
     assert.equal(saved.variants[0].cost, cost);
     const detail = await request("GET", `/${productId}`);
-    assert.equal((await detail.json()).data.variants[0].cost, cost);
+    const detailData = (await detail.json()).data;
+    assert.equal(Object.hasOwn(detailData, "cost"), false);
+    assert.equal(detailData.variants[0].cost, cost);
     const list = await request("GET", "");
-    assert.equal((await list.json()).data.find((item) => item.id === productId).variants[0].cost, cost);
+    const listData = (await list.json()).data.find((item) => item.id === productId);
+    assert.equal(Object.hasOwn(listData, "cost"), false);
+    assert.equal(listData.variants[0].cost, cost);
     assert.equal((await db.prepare("SELECT cost FROM products WHERE id = ?").bind(productId).first()).cost, cost);
     assert.equal((await db.prepare("SELECT cost FROM product_variants WHERE product_id = ?").bind(productId).first()).cost, cost);
   }
@@ -124,14 +128,24 @@ test("each SKU retains its own cost, and product summary ignores a stale top-lev
   const created = await request("POST", "", input);
   const body = await created.json();
   assert.equal(created.status, 201, JSON.stringify(body));
-  assert.equal(body.data.cost, 150);
+  assert.equal(Object.hasOwn(body.data, "cost"), false);
   assert.deepEqual(body.data.variants.map((variant) => variant.cost), [150, 250]);
   input.variants[1].cost = 50;
   const updated = await request("PUT", `/${body.data.id}`, input);
   const saved = await updated.json();
   assert.equal(updated.status, 200, JSON.stringify(saved));
-  assert.equal(saved.data.cost, 50);
+  assert.equal(Object.hasOwn(saved.data, "cost"), false);
   assert.deepEqual(saved.data.variants.map((variant) => variant.cost), [150, 50]);
   const detail = await request("GET", `/${body.data.id}`);
   assert.deepEqual((await detail.json()).data.variants.map((variant) => variant.cost), [150, 50]);
+  // A valid product-level cost cannot substitute for a missing cost on any SKU.
+  for (const index of [0, 1]) {
+    const invalid = structuredClone(input);
+    delete invalid.variants[index].cost;
+    const response = await request("PUT", `/${body.data.id}`, invalid);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).message, new RegExp(`SKU MULTI-COST-${index} 的成本必填`));
+  }
+  const unchanged = await request("GET", `/${body.data.id}`);
+  assert.deepEqual((await unchanged.json()).data.variants.map((variant) => variant.cost), [150, 50]);
 });

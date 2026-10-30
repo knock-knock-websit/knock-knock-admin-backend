@@ -13,7 +13,6 @@ type ProductRow = {
   categoryId: string | null;
   price: number;
   compareAtPrice: number | null;
-  cost: number;
   stock: number;
   safetyStock: number;
   status: ProductStatus;
@@ -109,7 +108,7 @@ type ProductInput = {
 
 const productColumns = `
   p.id, p.name, p.code, p.category, p.category_id AS categoryId,
-  p.price, p.compare_at_price AS compareAtPrice, p.cost,
+  p.price, p.compare_at_price AS compareAtPrice,
   p.inventory AS stock, p.safety_stock AS safetyStock, p.status,
   p.scheduled_publish_at AS scheduledPublishAt,
   p.tag_type AS tagType,
