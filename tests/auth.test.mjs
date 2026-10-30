@@ -25,7 +25,7 @@ before(async () => {
   }));
   db = await worker.getD1Database("DB");
   for (const name of ["0002_admin_roles.sql", "0003_admin_users.sql"]) {
-    const sql = await readFile(new URL(`../../knock-knock-database/migrations/${name}`, import.meta.url), "utf8");
+    const sql = await readFile(new URL(`./fixtures/migrations/${name}`, import.meta.url), "utf8");
     for (const statement of sql.split(";").filter((part) => part.trim())) await db.prepare(statement).run();
   }
   await db.prepare("CREATE TABLE products (status TEXT, active INTEGER, scheduled_publish_at TEXT, updated_at TEXT)").run();
